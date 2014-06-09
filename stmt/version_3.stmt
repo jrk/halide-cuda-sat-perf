@@ -1,0 +1,108 @@
+Injecting realization of SI_version_3
+Inlining Input
+Injecting tracing...
+Injecting profiling...
+Adding checks for parameters
+Computing bounds of each function's value
+Adding checks for images
+Performing computation bounds inference...
+Performing sliding window optimization...
+Performing allocation bounds inference...
+Uniquifying variable names...
+Performing storage folding optimization...
+Injecting debug_to_file calls...
+Simplifying...
+Dynamically skipping stages...
+Performing storage flattening...
+Injecting host <-> dev buffer copies...
+Injecting per-block gpu synchronization...
+Removing code that depends on undef values...
+Simplifying...
+Unrolling...
+Simplifying...
+Vectorizing...
+Simplifying...
+Specializing clamped ramps...
+Detecting vector interleavings...
+Injecting early frees...
+Injecting device frees...
+Simplifying...
+Simplified:
+if (S_version_3.host_and_dev_are_null) {
+  rewrite_buffer(S_version_3.buffer, 4, 0, 4096, 1, 0, 4096, 4096)
+}
+if (i0.host_and_dev_are_null) {
+  rewrite_buffer(i0.buffer, 4, 0, 4096, 1, 0, 4096, 4096)
+}
+if (!(S_version_3.host_and_dev_are_null || i0.host_and_dev_are_null)) {
+  assert((S_version_3.elem_size == 4), "Output buffer S_version_3 has type float32, but elem_size of the buffer_t passed in is %d instead of 4", S_version_3.elem_size)
+  assert((i0.elem_size == 4), "Input buffer i0 has type float32, but elem_size of the buffer_t passed in is %d instead of 4", i0.elem_size)
+  assert((S_version_3.min.0 <= 0), "Output buffer S_version_3 is accessed at %d, which is before the min (%d) in dimension 0", 0, S_version_3.min.0)
+  assert(((4096 - S_version_3.extent.0) <= S_version_3.min.0), "Output buffer S_version_3 is accessed at %d, which is beyond the max (%d) in dimension 0", 4095, ((S_version_3.min.0 + S_version_3.extent.0) + -1))
+  assert((S_version_3.min.1 <= 0), "Output buffer S_version_3 is accessed at %d, which is before the min (%d) in dimension 1", 0, S_version_3.min.1)
+  assert(((4096 - S_version_3.extent.1) <= S_version_3.min.1), "Output buffer S_version_3 is accessed at %d, which is beyond the max (%d) in dimension 1", 4095, ((S_version_3.min.1 + S_version_3.extent.1) + -1))
+  assert((i0.min.0 <= 0), "Input buffer i0 is accessed at %d, which is before the min (%d) in dimension 0", 0, i0.min.0)
+  assert(((4096 - i0.extent.0) <= i0.min.0), "Input buffer i0 is accessed at %d, which is beyond the max (%d) in dimension 0", 4095, ((i0.min.0 + i0.extent.0) + -1))
+  assert((i0.min.1 <= 0), "Input buffer i0 is accessed at %d, which is before the min (%d) in dimension 1", 0, i0.min.1)
+  assert(((4096 - i0.extent.1) <= i0.min.1), "Input buffer i0 is accessed at %d, which is beyond the max (%d) in dimension 1", 4095, ((i0.min.1 + i0.extent.1) + -1))
+  assert((S_version_3.stride.0 == 1), "Static constraint violated: S_version_3.stride.0 == 1")
+  assert((i0.stride.0 == 1), "Static constraint violated: i0.stride.0 == 1")
+  assert((i0.min.0 == 0), "Static constraint violated: i0.min.0 == 0")
+  assert((i0.extent.0 == 4096), "Static constraint violated: i0.extent.0 == 4096")
+  assert((i0.stride.1 == 4096), "Static constraint violated: i0.stride.1 == 4096")
+  assert((i0.min.1 == 0), "Static constraint violated: i0.min.1 == 0")
+  assert((i0.extent.1 == 4096), "Static constraint violated: i0.extent.1 == 4096")
+  let S_version_3.total_extent.0 = int64(S_version_3.extent.0)
+  let S_version_3.total_extent.1.s = int64(S_version_3.extent.1)
+  assert((S_version_3.total_extent.0 <= int64(2147483647)), "Total allocation for buffer S_version_3 exceeds 2^31 - 1")
+  assert(((S_version_3.total_extent.1.s*int64(S_version_3.stride.1)) <= int64(2147483647)), "Total allocation for buffer S_version_3 exceeds 2^31 - 1")
+  assert(((S_version_3.total_extent.1.s*S_version_3.total_extent.0) <= int64(2147483647)), "Product of extents for buffer S_version_3 exceeds 2^31 - 1")
+  assert((int64(4096) <= int64(2147483647)), "Total allocation for buffer i0 exceeds 2^31 - 1")
+  assert(((int64(4096)*int64(4096)) <= int64(2147483647)), "Total allocation for buffer i0 exceeds 2^31 - 1")
+  assert(((int64(4096)*int64(4096)) <= int64(2147483647)), "Product of extents for buffer i0 exceeds 2^31 - 1")
+  assert(((0 <= S_version_3.min.1) && ((S_version_3.min.1 + S_version_3.extent.1) <= 4096)), "Bounds given for y in S_version_3 (from %d to %d) don't cover required region (from %d to %d)", 0, 4095, S_version_3.min.1, ((S_version_3.min.1 + S_version_3.extent.1) + -1))
+  assert(((0 <= S_version_3.min.0) && ((S_version_3.min.0 + S_version_3.extent.0) <= 4096)), "Bounds given for x in S_version_3 (from %d to %d) don't cover required region (from %d to %d)", 0, 4095, S_version_3.min.0, ((S_version_3.min.0 + S_version_3.extent.0) + -1))
+  assert((halide_dev_malloc(S_version_3.buffer) == 0), "Failed to allocate device buffer for S_version_3")
+  produce S_version_3 {
+    assert((halide_copy_to_dev(i0.buffer) == 0), "Failed to copy buffer i0 to dev.")
+    assert((halide_copy_to_dev(S_version_3.buffer) == 0), "Failed to copy buffer S_version_3 to dev.")
+    parallel (S_version_3.s0.y.yo.__block_id_y, 0, 128) {
+      parallel (S_version_3.s0.x.xo.__block_id_x, 0, 128) {
+        allocate __shared[uint8 * 4096]
+        parallel (.__thread_id_y, 0, 6) {
+          parallel (.__thread_id_x, 0, 32) {
+            produce SI_version_3 {
+              let SI_version_3.s0.yi.t.base = min((.__thread_id_y*6), 26)
+              for (SI_version_3.s0.yi.t, 0, 6) {
+                __shared[(.__thread_id_x + ((SI_version_3.s0.yi.t.base + SI_version_3.s0.yi.t)*32))] = i0[(((S_version_3.s0.x.xo.__block_id_x*32) + .__thread_id_x) + (((S_version_3.s0.y.yo.__block_id_y*32) + (SI_version_3.s0.yi.t.base + SI_version_3.s0.yi.t))*4096))]
+              }
+              halide_gpu_thread_barrier()
+            } update SI_version_3 {
+              if ((.__thread_id_y < 1)) {
+                for (SI_version_3.s1.rxi.x$r, 1, 31) {
+                  __shared[(SI_version_3.s1.rxi.x$r + (.__thread_id_x*32))] = (__shared[(SI_version_3.s1.rxi.x$r + (.__thread_id_x*32))] + __shared[(SI_version_3.s1.rxi.x$r + (.__thread_id_x*32))])
+                }
+              }
+              halide_gpu_thread_barrier()
+              if ((.__thread_id_y < 1)) {
+                for (SI_version_3.s2.ryi.x$r, 1, 31) {
+                  __shared[(.__thread_id_x + (SI_version_3.s2.ryi.x$r*32))] = (__shared[(.__thread_id_x + (SI_version_3.s2.ryi.x$r*32))] + __shared[(.__thread_id_x + (SI_version_3.s2.ryi.x$r*32))])
+                }
+              }
+              halide_gpu_thread_barrier()
+            }
+            let S_version_3.s0.y.yi.t.base = min((.__thread_id_y*6), 26)
+            for (S_version_3.s0.y.yi.t, 0, 6) {
+              S_version_3[((((S_version_3.s0.x.xo.__block_id_x*32) + .__thread_id_x) - S_version_3.min.0) + ((((S_version_3.s0.y.yo.__block_id_y*32) + (S_version_3.s0.y.yi.t.base + S_version_3.s0.y.yi.t)) - S_version_3.min.1)*S_version_3.stride.1))] = __shared[((.__thread_id_x + (((S_version_3.s0.y.yi.t.base + S_version_3.s0.y.yi.t) % 32)*32)) + (((S_version_3.s0.y.yi.t.base + S_version_3.s0.y.yi.t)/32)*1024))]
+            }
+          }
+        }
+        free __shared
+      }
+    }
+    set_dev_dirty(S_version_3.buffer, uint8(1))
+  }
+  0
+}
+
+

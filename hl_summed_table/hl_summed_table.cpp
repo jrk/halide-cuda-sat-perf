@@ -6,51 +6,54 @@
 
 using namespace Halide;
 
-void check_correctness(Image<float> hl_out, Image<float> in, int tile);
+// image dimensions and tile width
+static const int width = 4096;
+static const int height= 4096;
+static const int tile  = 32;
 
-int main(int argc, char **argv) {
-    if (argc < 3) {
-        std::cerr << "Provide image_width and tile_width as second and third command line args" << std::endl;
-    }
+// different version of the intra tile computation
+// see each function for details
+void version_0(Func I);
+void version_1(Func I);
+void version_2(Func I);
+void version_3(Func I);
+void version_4(Func I);
 
-    int width = atoi(argv[1]);
-    int tile  = atoi(argv[2]);
+// apply the same schedule on all the versions
+void apply_schedule(Func& S, Func& SI);
 
-    int height= width;
+// Global vars - ugly but will do for now
+Var x("x")  , y("y");
+Var xi("xi"), yi("yi");
+Var xo("xo"), yo("yo");
+RDom rxi(1, tile-1, "rxi");
+RDom ryi(1, tile-1, "ryi");
 
-    // input image
-    Image<float> in(width,height);
-    for (int y=0; y<height/tile; y++) {
-        for (int x=0; x<width/tile; x++) {
-            for (int v=0; v<tile; v++) {
-                for (int u=0; u<tile; u++) {
-                    in(x*tile+u, y*tile+v) = float(rand() % 10);
-                }
-            }
+int main(int argc, char **argv)
+{
+    Image<float> in(width,height);      // input image
+    for (int j=0; j<height; j++) {
+        for (int i=0; i<width; i++) {
+            in(i,j) = float(rand() % 10);
         }
     }
 
-
     Func I("Input");
-    Func S("S");
-    Func SI("SI");
-
-    Var x("x"), y("y");
-    Var xi("xi"), yi("yi");
-    Var xo("xo"), yo("yo");
-
-    RDom rxi(1, tile-1, "rxi");     // prefix sums within tiles
-    RDom ryi(1, tile-1, "ryi");
-
     I(x,y) = in(x,y);
 
-    SI(xi ,xo,yi ,yo) = I(xo*tile+xi, yo*tile+yi);
-    SI(rxi,xo,yi ,yo) = SI(rxi,xo,yi ,yo) + SI(rxi, xo, yi, yo);
-    SI(xi ,xo,ryi,yo) = SI(xi ,xo,ryi,yo) + SI(xi, xo, ryi, yo);
+    version_0(I);    // each creates the Halide Funcs,
+    version_1(I);    // applies the same schedule
+    version_2(I);    // and realizes the result on 4096 x 4096 image
+    version_3(I);
+    version_4(I);
 
-    S(x,y) = SI(x%tile, x/tile, y%tile, y/tile);    // final image
+    return 0;
+}
 
+
+void apply_schedule(Func& S, Func& SI) {
     Target target = get_jit_target_from_environment();
+
     if (target.has_gpu_feature() || (target.features & Target::GPUDebug)) {
         Var t("t");
 
@@ -65,59 +68,83 @@ int main(int argc, char **argv) {
         S.split(yi, yi, t, 6).reorder(t,xi,yi,xo,yo).gpu_threads(xi,yi);
         S.gpu_blocks(xo,yo);
         S.bound(x, 0, width).bound(y, 0, height);
+    } else {
+        std::cerr << "Error: Set HL_JIT_TARGET=cuda or cuda-gpu_debug" << std::endl;
+        exit(-1);
     }
-
-    Image<float> hl_out = S.realize(width,height);
-
-    check_correctness(hl_out, in, tile);
-
-    return 0;
 }
 
-void check_correctness(Image<float> hl_out, Image<float> in, int tile) {
-    int width = hl_out.width();
-    int height = hl_out.height();
+void version_0(Func I) {
+    Func S ("S_version_0");
+    Func SI("SI_version_0");
 
-    Image<float> diff(width,height);
-    Image<float> ref(width,height);
+    SI(xi ,xo,yi ,yo) = I(xo*tile+xi, yo*tile+yi);
+    SI(rxi,xo,yi ,yo) = SI(rxi,xo,yi ,yo) + SI(rxi-1, xo, yi, yo);
+    SI(xi ,xo,ryi,yo) = SI(xi ,xo,ryi,yo) + SI(xi, xo, ryi-1, yo);
 
-    for (int y=0; y<height/tile; y++) {
-        for (int x=0; x<width/tile; x++) {
-            for (int v=0; v<tile; v++) {
-                for (int u=0; u<tile; u++) {
-                    ref(x*tile+u, y*tile+v) = in(x*tile+u, y*tile+v);
-                }
-            }
-        }
-    }
+    S(x,y) = SI(x%tile, x/tile, y%tile, y/tile);    // final image
 
-    for (int y=0; y<height/tile; y++) {          // x filtering
-        for (int x=0; x<width/tile; x++) {
-            for (int v=0; v<tile; v++) {
-                for (int u=1; u<tile; u++) {
-                    ref(x*tile+u, y*tile+v) += ref(x*tile+u-1, y*tile+v);
-                }
-            }
-        }
-    }
+    apply_schedule(S, SI);
 
-    for (int y=0; y<height/tile; y++) {          // y filtering
-        for (int x=0; x<width/tile; x++) {
-            for (int v=1; v<tile; v++) {
-                for (int u=0; u<tile; u++) {
-                    ref(x*tile+u, y*tile+v) += ref(x*tile+u, y*tile+v-1);
-                }
-            }
-        }
-    }
+    Image<float> hl_out = S.realize(width,height);
+}
 
-    float diff_sum = 0;
-    for (int y=0; y<height; y++) {
-        for (int x=0; x<width; x++) {
-            diff(x,y) = ref(x,y) - hl_out(x,y);
-            diff_sum += std::abs(diff(x,y));
-        }
-    }
+void version_1(Func I) {
+    Func S ("S_version_1");
+    Func SI("SI_version_1");
 
-    std::cerr << "\nError = " << diff_sum << std::endl;
+    SI(xi ,xo,yi ,yo) = I(xo*tile+xi, yo*tile+yi);
+    SI(rxi,xo,yi ,yo) = SI(rxi,xo,yi ,yo);
+    SI(xi ,xo,ryi,yo) = SI(xi ,xo,ryi,yo);
+
+    S(x,y) = SI(x%tile, x/tile, y%tile, y/tile);    // final image
+
+    apply_schedule(S, SI);
+
+    Image<float> hl_out = S.realize(width,height);
+}
+
+void version_2(Func I) {
+    Func S ("S_version_2");
+    Func SI("SI_version_2");
+
+    SI(xi ,xo,yi ,yo) = I(xo*tile+xi, yo*tile+yi);
+    SI(rxi,xo,yi ,yo) = SI(rxi-1, xo, yi, yo);
+    SI(xi ,xo,ryi,yo) = SI(xi, xo, ryi-1, yo);
+
+    S(x,y) = SI(x%tile, x/tile, y%tile, y/tile);    // final image
+
+    apply_schedule(S, SI);
+
+    Image<float> hl_out = S.realize(width,height);
+}
+
+void version_3(Func I) {
+    Func S ("S_version_3");
+    Func SI("SI_version_3");
+
+    SI(xi ,xo,yi ,yo) = I(xo*tile+xi, yo*tile+yi);
+    SI(rxi,xo,yi ,yo) = SI(rxi,xo,yi ,yo) + SI(rxi, xo, yi, yo);
+    SI(xi ,xo,ryi,yo) = SI(xi ,xo,ryi,yo) + SI(xi, xo, ryi, yo);
+
+    S(x,y) = SI(x%tile, x/tile, y%tile, y/tile);    // final image
+
+    apply_schedule(S, SI);
+
+    Image<float> hl_out = S.realize(width,height);
+}
+
+void version_4(Func I) {
+    Func S ("S_version_4");
+    Func SI("SI_version_4");
+
+    SI(xi ,xo,yi ,yo) = I(xo*tile+xi, yo*tile+yi);
+    SI(rxi,xo,yi ,yo) = 0.0f;
+    SI(xi ,xo,ryi,yo) = 0.0f;
+
+    S(x,y) = SI(x%tile, x/tile, y%tile, y/tile);    // final image
+
+    apply_schedule(S, SI);
+
+    Image<float> hl_out = S.realize(width,height);
 }
