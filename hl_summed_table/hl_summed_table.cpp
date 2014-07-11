@@ -4,6 +4,27 @@
 #include <iostream>
 #include <Halide.h>
 
+#include <sys/time.h>
+
+static double current_time() {
+    static bool first_call = true;
+    static timeval reference_time;
+    if (first_call) {
+        first_call = false;
+        gettimeofday(&reference_time, NULL);
+        return 0.0;
+    } else {
+        timeval t;
+        gettimeofday(&t, NULL);
+        return ((t.tv_sec - reference_time.tv_sec)*1000.0 +
+                (t.tv_usec - reference_time.tv_usec)/1000.0);
+    }
+}
+static const int timing_runs = 4;
+
+#define TIME(stmt)  double __minT = 1e10; for (int i = 0; i < timing_runs; i++) { double start = current_time(); (stmt); double end = current_time(); double elapsed = end-start; __minT = (elapsed < __minT) ? elapsed : __minT; } __minT
+#define GET_TIME    __minT
+
 using namespace Halide;
 
 // image dimensions and tile width
@@ -86,7 +107,9 @@ void version_0(Func I) {
 
     apply_schedule(S, SI);
 
-    Image<float> hl_out = S.realize(width,height);
+    TIME(S.realize(width,height));
+    double t = GET_TIME;
+    std::cerr << "version_0 took " << t << " ms\n";
 }
 
 void version_1(Func I) {
@@ -101,7 +124,9 @@ void version_1(Func I) {
 
     apply_schedule(S, SI);
 
-    Image<float> hl_out = S.realize(width,height);
+    TIME(S.realize(width,height));
+    double t = GET_TIME;
+    std::cerr << "version_1 took " << t << " ms\n";
 }
 
 void version_2(Func I) {
@@ -116,7 +141,9 @@ void version_2(Func I) {
 
     apply_schedule(S, SI);
 
-    Image<float> hl_out = S.realize(width,height);
+    TIME(S.realize(width,height));
+    double t = GET_TIME;
+    std::cerr << "version_2 took " << t << " ms\n";
 }
 
 void version_3(Func I) {
@@ -131,7 +158,9 @@ void version_3(Func I) {
 
     apply_schedule(S, SI);
 
-    Image<float> hl_out = S.realize(width,height);
+    TIME(S.realize(width,height));
+    double t = GET_TIME;
+    std::cerr << "version_3 took " << t << " ms\n";
 }
 
 void version_4(Func I) {
@@ -146,5 +175,7 @@ void version_4(Func I) {
 
     apply_schedule(S, SI);
 
-    Image<float> hl_out = S.realize(width,height);
+    TIME(S.realize(width,height));
+    double t = GET_TIME;
+    std::cerr << "version_4 took " << t << " ms\n";
 }
