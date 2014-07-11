@@ -1,8 +1,8 @@
-CXX=g++
-NVCC=nvcc
+CXX?=g++
+NVCC?=nvcc
 MKDIR=mkdir -p
 RM=rm -rf
 
-CUDA_INC=/usr/local/cuda/include/
+CUDA_INC?=/usr/lib/nvidia-cuda-toolkit/include
 
-HALIDE_DIR=/home/gchauras/Projects/Halide
+HALIDE_DIR?=$(HOME)/Halide

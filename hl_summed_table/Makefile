@@ -3,10 +3,10 @@ PROGRAM_NAME=hl_summed_table
 include ../Makefile.common
 
 BUILD_DIR=_build
-BIN_DIR=../bin
+BIN_DIR=../bin/$(BUILD_PREFIX)
 EXE=$(BIN_DIR)/$(PROGRAM_NAME)
 
-HALIDE_LIB=$(HALIDE_DIR)/bin/libHalide.a
+HALIDE_LIB=$(HALIDE_DIR)/bin/$(BUILD_PREFIX)/libHalide.a
 
 SRC := $(wildcard *.cpp)
 OBJ := $(addprefix $(BUILD_DIR)/,$(notdir $(SRC:.cpp=.o)))
@@ -20,7 +20,7 @@ $(BUILD_DIR)/%.o: %.cpp $(INC)
 
 $(EXE): $(OBJ) $(HALIDE_LIB)
 	$(MKDIR) $(BIN_DIR)
-	$(CXX) -lz -lpthread -ldl -g -Wall $(OBJ) $(HALIDE_LIB) -o $(EXE)
+	$(CXX) -ldl -lpthread -g -Wall $(OBJ) $(HALIDE_LIB) -lz -lpthread -ldl -o $(EXE)
 
 clean:
 	$(RM) $(BUILD_DIR)

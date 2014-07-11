@@ -3,11 +3,13 @@ PROGRAM_NAME=cuda_summed_table
 include ../Makefile.common
 
 BIN_DIR := ../bin
-EXE     := $(BIN_DIR)/$(PROGRAM_NAME)
+EXE     := $(BIN_DIR)/$(BUILD_PREFIX)/$(PROGRAM_NAME)
 
 INCLUDE_FLAGS := -I$(CUDA_INC) -Iinclude/
 
-CUDA_NVCC_FLAGS=-gencode arch=compute_20,code=sm_21 --ptxas-options=-v -ftz=true -prec-div=false -prec-sqrt=false
+#CUDA_NVCC_FLAGS=-gencode arch=compute_20,code=sm_21 --ptxas-options=-v -ftz=true -prec-div=false -prec-sqrt=false
+CUDA_NVCC_FLAGS=-gencode arch=compute_30,code=sm_35 --ptxas-options=-v -ftz=true -prec-div=false -prec-sqrt=false
+#CUDA_NVCC_FLAGS=-arch=sm_21 -ftz=true -prec-div=false -prec-sqrt=false
 
 INC := $(wildcard include/*.h)
 OBJ := src/kernel_perf.o src/defs.o src/sat.o src/gpudefs.o
