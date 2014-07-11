@@ -18,6 +18,8 @@ extern void algSAT( dvector<float>& d_out,
 
 int main(int argc, char *argv[]) {
 
+    cudaSetDevice(0);
+    
     const int in_w = 4096, in_h = 4096;
 
     std::cout << "Generating random input image (" << in_w << "x" << in_h << ") ... " << std::endl;
