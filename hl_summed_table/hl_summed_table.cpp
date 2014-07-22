@@ -63,6 +63,7 @@ int main(int argc, char **argv)
     I(x,y) = in(x,y);
 
     version_0(I);    // each creates the Halide Funcs,
+    return 0;
     version_1(I);    // applies the same schedule
     version_2(I);    // and realizes the result on 4096 x 4096 image
     version_3(I);
@@ -79,14 +80,14 @@ void apply_schedule(Func& S, Func& SI) {
         Var t("t");
 
         SI.compute_at(S, Var("__block_id_x"));
-        SI.split(yi, yi, t, 6).reorder(t,xi,yi,xo,yo).gpu_threads(xi,yi);
+        SI.split(yi, yi, t, 8).reorder(t,xi,yi,xo,yo).gpu_threads(xi,yi);
         SI.update(0).reorder(rxi.x,yi,xo,yo).gpu_threads(yi);
         SI.update(1).reorder(ryi.x,xi,xo,yo).gpu_threads(xi);
 
         S.compute_root();
         S.reorder_storage(y, x);
         S.split(x, xo,xi, tile).split(y, yo,yi, tile);
-        S.split(yi, yi, t, 6).reorder(t,xi,yi,xo,yo).gpu_threads(xi,yi);
+        S.split(yi, yi, t, 8).reorder(t,xi,yi,xo,yo).gpu_threads(xi,yi);
         S.gpu_blocks(xo,yo);
         S.bound(x, 0, width).bound(y, 0, height);
     } else {
@@ -102,6 +103,8 @@ void version_0(Func I) {
     SI(xi ,xo,yi ,yo) = I(xo*tile+xi, yo*tile+yi);
     SI(rxi,xo,yi ,yo) = SI(rxi,xo,yi ,yo) + SI(rxi-1, xo, yi, yo);
     SI(xi ,xo,ryi,yo) = SI(xi ,xo,ryi,yo) + SI(xi, xo, ryi-1, yo);
+    // This pads shared memory by 1 extra column, reducing bank conflicts.
+    SI(32, xo, 0, yo) = undef<float>();
 
     S(x,y) = SI(x%tile, x/tile, y%tile, y/tile);    // final image
 
